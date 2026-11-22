@@ -1,3 +1,58 @@
+# Exynos 8895 Linux 5.10 bring-up
+
+This public Android Common Kernel fork starts from Linux 5.10.245,
+`android13-5.10` at `9536d991bb596a507f46aafe6b5f64fe9e599e78`.
+The development target is the first Android 17 release. AOSP's Android 17
+QPR1 and later releases require a newer Android Common Kernel branch.
+
+The Galaxy S8 (SM-G950F, `dreamlte`) is the first target. Its minimal
+device tree describes the CPU topology, interrupt controller, timer,
+RAM, bootloader splash framebuffer and persistent crash-log reservation.
+The defconfig enables Binder/BinderFS, cgroup BPF and JIT, namespaces,
+SELinux, ext4/F2FS encryption and pstore. The IPv4 and IPv6 x_tables
+filter tables and the built-in xt_bpf match support Android network
+filtering.
+
+## LineageOS Z3S reference
+
+The LineageOS 24.0 Galaxy S20 Ultra kernel uses Linux 4.19.325 with
+substantial backports. Its universal9830-common device tree sets
+`ro.bpf.kver_override=5.10.239` for the Android BPF loader. This fork
+uses the native 5.10.245 BPF implementation, with no corresponding
+ROM property configured here. The reference informed BinderFS,
+cgroup BPF and xt_bpf configuration.
+
+- [Pinned universal9830 kernel configuration](https://github.com/LineageOS/android_kernel_samsung_universal9830/blob/97369af7bbd66581d3e993fea083f3eed02d3c20/arch/arm64/configs/exynos9830_defconfig)
+- [Pinned universal9830-common BPF property](https://github.com/LineageOS/android_device_samsung_universal9830-common/blob/f8db0251719ed30b92ce6765611af5c4d1826ead/product.prop)
+
+## Build the ARM64 Image and Galaxy S8 DTB
+
+Use an AArch64 Linux toolchain and the standard Linux kernel build
+dependencies, including make, bc, flex, bison and OpenSSL headers.
+
+```sh
+make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- exynos8895_dreamlte_defconfig
+make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+    KCFLAGS=-Wno-error -j"$(nproc)" Image exynos/exynos8895-dreamlte.dtb
+```
+
+The outputs are `out/arch/arm64/boot/Image` and
+`out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb`.
+These are raw build outputs for bring-up. Samsung boot packaging, UFS,
+power management, full display, vendor HALs, and Android and hardware
+boot validation are pending.
+
+The first build passed all 64 requested Kconfig selections. The same
+ARM64 Image booted a test initramfs under QEMU virt and passed BPF
+object naming, cgroup socket-create enforcement and detach, and IPv4
+and IPv6 xt_bpf registration. That test used QEMU's virtual DTB.
+The compiled dreamlte DTB was checked separately.
+
+- [Android Common Kernel support matrix](https://source.android.com/docs/core/architecture/kernel/android-common)
+- [Reference Galaxy S8 device tree](https://android.googlesource.com/kernel/common/+/76bdb627cab87dfa1d901810e22ee7fae6d3dc89/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dts)
+
+---
+
 # How do I submit patches to Android Common Kernels
 
 1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
