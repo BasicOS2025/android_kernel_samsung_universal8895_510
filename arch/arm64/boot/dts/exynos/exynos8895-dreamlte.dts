@@ -13,6 +13,13 @@
 	compatible = "samsung,dreamlte", "samsung,exynos8895";
 	chassis-type = "handset";
 
+	/* Samsung DTBH identifiers for the dreamlte EUR rev10 board. */
+	model_info-chip = <8895>;
+	model_info-platform = "android";
+	model_info-subtype = "samsung";
+	model_info-hw_rev = <10>;
+	model_info-hw_rev_end = <255>;
+
 	chosen {
 		#address-cells = <2>;
 		#size-cells = <1>;
