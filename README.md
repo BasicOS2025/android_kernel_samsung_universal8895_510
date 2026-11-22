@@ -38,15 +38,36 @@ make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
 
 The outputs are `out/arch/arm64/boot/Image` and
 `out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb`.
-These are raw build outputs for bring-up. Samsung boot packaging, UFS,
-power management, full display, vendor HALs, and Android and hardware
-boot validation are pending.
+These are raw build outputs for bring-up. UFS, power management, full
+display, vendor HALs and physical Android boot validation are pending.
 
 The first build passed all 64 requested Kconfig selections. The same
 ARM64 Image booted a test initramfs under QEMU virt and passed BPF
 object naming, cgroup socket-create enforcement and detach, and IPv4
 and IPv6 xt_bpf registration. That test used QEMU's virtual DTB.
 The compiled dreamlte DTB was checked separately.
+
+## Galaxy S8 LineageOS boot path
+
+The dreamlte DTB now carries the Samsung DTBH model IDs from the
+downstream Galaxy S8 EUR rev10 device tree. The existing LineageOS
+device packer accepted one DTBH entry for chip 8895 and hardware
+revisions 10–255. The host validator accepted the 2048-byte boot
+image page layout and Samsung load addresses with this kernel and
+a diagnostic initramfs. The diagnostic archive does not include
+the LineageOS first-stage ramdisk or Samsung fstab.
+
+The pinned LineageOS device fstab needs
+`/dev/block/platform/11120000.ufs/by-name/SYSTEM` at first-stage
+mount. The current 5.10 Exynos UFS driver matches Exynos 7 and
+Auto v9 controllers. Bring up the real Exynos 8895 controller, PHY,
+clocks and regulators, and verify the Android block-device path
+on hardware before switching the ROM manifest to this kernel.
+Check that the physical bootloader hands control to the 5.10
+Image and that the ramoops records survive a warm reset.
+
+- [Existing Samsung boot packer](https://github.com/BasicOS2025/android_device_samsung_universal8895-common/blob/ef490e1abfa212ab2f0c562101fd440df839eb46/tools/mkbootimg.mk)
+- [LineageOS first-stage fstab](https://github.com/BasicOS2025/android_device_samsung_universal8895-common/blob/ef490e1abfa212ab2f0c562101fd440df839eb46/ramdisk/etc/fstab.samsungexynos8895)
 
 - [Android Common Kernel support matrix](https://source.android.com/docs/core/architecture/kernel/android-common)
 - [Reference Galaxy S8 device tree](https://android.googlesource.com/kernel/common/+/76bdb627cab87dfa1d901810e22ee7fae6d3dc89/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dts)
