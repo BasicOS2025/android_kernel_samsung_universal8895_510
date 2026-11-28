@@ -776,6 +776,45 @@ static void exynos_ufs_config_sync_pattern_mask(struct exynos_ufs *ufs,
 	exynos_ufs_disable_ov_tm(hba);
 }
 
+static bool exynos8895_ufs(struct exynos_ufs *ufs)
+{
+	return of_device_is_compatible(ufs->hba->dev->of_node, "samsung,exynos8895-ufs");
+}
+
+static int exynos8895_pwr_cal(struct exynos_ufs *ufs,
+			     struct ufs_pa_layer_attr *p, bool pre)
+{
+	struct ufs_hba *hba = ufs->hba;
+	bool hs = ufshcd_is_hs_mode(p);
+	enum phy_mode mode = PHY_MODE_INVALID;
+	int ret, i;
+	static const u32 mib[] = {0x1569, 0x1584, 0x2041, 0x2042, 0x2043, 0x15b0, 0x15b1, 0x15b2};
+	u32 values[] = {hs, hs, 8064, 28224, 20160, 12000, 32000, 16000};
+	static const u32 apb[] = {0x7888, 0x788c, 0x7890, 0x78b8, 0x78bc, 0x78c0};
+
+	if (!pre)
+		return phy_calibrate(ufs->phy);
+	if (p->lane_rx != p->lane_tx || p->gear_rx != p->gear_tx ||
+	    !p->lane_rx || p->lane_rx > 2 || !p->gear_rx ||
+	    (hs && p->gear_rx > 3))
+		return -EINVAL;
+	if (hs) {
+		if (p->hs_rate == PA_HS_MODE_A) mode = PHY_MODE_UFS_HS_A;
+		else if (p->hs_rate == PA_HS_MODE_B) mode = PHY_MODE_UFS_HS_B;
+		else return -EINVAL;
+	}
+	phy_set_bus_width(ufs->phy, p->lane_rx);
+	ret = phy_set_mode_ext(ufs->phy, mode, hs ? p->gear_rx : 1);
+	if (ret) return ret;
+	for (i = 0; i < ARRAY_SIZE(mib); i++) {
+		ret = ufshcd_dme_set(hba, UIC_ARG_MIB(mib[i]), values[i]);
+		if (ret) return ret;
+	}
+	for (i = 0; i < ARRAY_SIZE(apb); i++)
+		unipro_writel(ufs, values[i + 2], apb[i]);
+	return phy_calibrate(ufs->phy);
+}
+
 static int exynos_ufs_pre_pwr_mode(struct ufs_hba *hba,
 				struct ufs_pa_layer_attr *dev_max_params,
 				struct ufs_pa_layer_attr *dev_req_params)
@@ -799,6 +838,9 @@ static int exynos_ufs_pre_pwr_mode(struct ufs_hba *hba,
 		pr_err("%s: failed to determine capabilities\n", __func__);
 		goto out;
 	}
+
+	if (exynos8895_ufs(ufs))
+		return exynos8895_pwr_cal(ufs, dev_req_params, true);
 
 	if (ufs->drv_data->pre_pwr_change)
 		ufs->drv_data->pre_pwr_change(ufs, dev_req_params);
@@ -840,6 +882,9 @@ static int exynos_ufs_post_pwr_mode(struct ufs_hba *hba,
 
 	if (!lanes)
 		lanes = 1;
+
+	if (exynos8895_ufs(ufs))
+		return exynos8895_pwr_cal(ufs, pwr_req, false);
 
 	if (ufs->drv_data->post_pwr_change)
 		ufs->drv_data->post_pwr_change(ufs, pwr_req);
@@ -1026,6 +1071,7 @@ static int exynos_ufs_post_link(struct ufs_hba *hba)
 	struct exynos_ufs *ufs = ufshcd_get_variant(hba);
 	struct phy *generic_phy = ufs->phy;
 	struct exynos_ufs_uic_attr *attr = ufs->drv_data->uic_attr;
+	int ret;
 
 	exynos_ufs_establish_connt(ufs);
 	exynos_ufs_fit_aggr_timeout(ufs);
@@ -1078,7 +1124,8 @@ static int exynos_ufs_post_link(struct ufs_hba *hba)
 		}
 	}
 
-	phy_calibrate(generic_phy);
+	ret = phy_calibrate(generic_phy);
+	if (ret) return ret;
 
 	if (ufs->drv_data->post_link)
 		ufs->drv_data->post_link(ufs);
