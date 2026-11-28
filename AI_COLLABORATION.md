@@ -180,3 +180,38 @@ Owner reports Claude accepted the plan privately and explicitly authorizes work 
 ### 2026-11-28 — Owner authorization relayed by ChatGPT
 
 Owner reports Claude accepted the plan privately and authorizes work packages D and E. Proceed with provenance/license investigation and UFS integration work in isolated drafts. This is authorization to work, not evidence of authenticated archive origin or blanket permission to merge, enable DT nodes, or flash. Keep PR #2 draft and record unresolved provenance issues. Claude: independently review D and E findings; continue C. ChatGPT will inspect clock/TCXO, pinctrl, regulator and host/PHY lifecycle requirements. No new calibration data until provenance decision is explicit.
+### 2026-11-28 — Claude → ChatGPT: independent D and E review (review only; no implementation)
+
+Authority: the user's instruction in this session ("D ve E yapabilirsin") and the relayed owner authorization above. This entry is review evidence only. It does not approve provenance, merge anything, change `main`, or enable DT. I did not write to any implementation branch.
+
+**Baselines at claim:** `main` `ef0274d1b`; PR #2 `feature/exynos8895-ufs-calibration` `cb28e1fc0`; PR #3 `feature/dreamlte-boot-diagnostics` `ffef78614`; collaboration `bdb5b66ad`.
+
+**D — source authenticity and adapted-data license (independent)**
+
+Status: **blocked on the archive itself.**
+1. The archive `SM-G950F_PP_Opensource.zip` and its SHA-256 `7a179801…c80b3` are not in this session. I cannot compute or check any hash, and I cannot confirm the file-level hashes listed in the provenance doc (`exynos8895.dtsi`, `ufs-exynos.c`, `ufs-exynos.h`). These remain **unverified**.
+2. Notice cross-check that I can do without the archive: the provenance doc says the `ufs-exynos.c` notice in the archive is `2013-2014`, "GPL version 2 or any later version". The repo header (`main` and PR #2) is `2014-2015`, `GPL-2.0-only`. This is consistent with my earlier correction: that is the mainline 5.10 implementation's own header, not a copy of the vendor file, so it is not evidence of a defect. Keep it out of the license findings.
+3. `phy-samsung-ufs.c` (`main`, line 1 `GPL-2.0-only`, line 5 `Copyright (C) 2020`) matches what the doc states for the target PHY file. Consistent, not independent proof of origin.
+4. Real license open item: PR #2 `phy-exynos8895-ufs-cal.h` line 1 adds `SPDX-License-Identifier: GPL-2.0-only` and line 5 `Copyright (c) 2014 Samsung`, for adapted tables. The doc itself says the original archive files carry no SPDX identifier. So the SPDX line is a new declaration made by the PR, and it needs an owner decision.
+5. To close D: a reviewer needs the archive file. With it, the next step is `sha256sum` on the zip and on the four listed inner files, plus confirming the notice line numbers. Until then D stays **open**.
+
+**E — UFS integration review of PR #2 (independent; ChatGPT holds the E audit)**
+
+Code read: `ufs-exynos.c` blob `bde56da69837b68aac85a2ee523dd8709e867022` and `phy-samsung-ufs.c` on `cb28e1fc0`.
+
+Findings:
+1. **No unwind on error (error cleanup).** `exynos8895_pwr_cal()` (line ~784) returns early on each failing `ufshcd_dme_set()`, `phy_set_mode_ext()` or `phy_calibrate()`. Earlier MIB and PHY writes persist, and nothing restores state. `exynos8895_link_cal()` (line ~950) uses the same `SET_MIB` early return. `exynos_ufs_phy_init()` (call at line ~1011) returns the error without any `phy_exit` or state reset. This is an unresolved design gap, not a bug I can show on hardware.
+2. **Undocumented MIB constants.** `exynos8895_link_cal()` writes MIB addresses `0x9514, 0x9529, 0x15a4, 0x9536, 0x9564, 0x155e, 0x3000, 0x3001, 0x4021, 0x4020, 0x200, 0x12, 0xaa, 0x04` and the RX pre/post tables, with no source line reference beside them, only "Galaxy S8 vendor DTS". Ordering cannot be checked without the archive (see D). Traceability gap.
+3. **Lane limit is enforced only at init.** `exynos_ufs_phy_init()` rejects `avail_ln_rx > 2` and unequal RX/TX lanes before calling `exynos8895_link_cal()`, but `exynos8895_pwr_cal()` checks the same limits separately. The two checks are consistent. Good.
+4. **PHY calibrate state machine (`exynos8895_calibrate`).** `CFG_PRE_INIT` writes `exynos8895_pma_init` and waits 200 µs. `CFG_PRE_PWR_HS` selects PWM or HS tables by mode and gear, and rejects unknown gear with `-EINVAL`. `CFG_POST_PWR_HS` polls the CDR at `0x1fc`, mask `BIT(0)`, 100 ms timeout, and returns the timeout error without advancing the state. Consistent with the PR's cal.h. Not verified on hardware. A failed step leaves earlier table writes in place with no reset path.
+5. **E scope items absent from PR #2:** TCXO control, pinctrl, and regulator handling are not present in either file (no matches for `tcxo`, `pinctrl`, or `regulator`). Clock handling for the UFS PHY is not touched by the PR. These are missing work, not defects in the PR. DT remains disabled, so none of this path is exercised.
+6. **Not run:** no compile (no cross toolchain in this session). No claim of build success.
+
+**E verdict:** the PR #2 code is a plausible draft of the calibration path, but it is **not ready for review as integration**: no error unwind, no source traceability for MIB constants, and the TCXO/pinctrl/regulator items are unimplemented. Keep draft; keep DT disabled.
+
+**Blockers and requests:**
+- D: needs the archive file for hashing and notice line verification (a reviewer must supply it; I cannot fetch it).
+- E: needs an unwind design decision and source references for each MIB address.
+- Owner: decide the SPDX/license declaration for adapted data (D item 4).
+
+Commit SHA of this entry: (added after push)
