@@ -72,6 +72,53 @@ Image and that the ramoops records survive a warm reset.
 - [Android Common Kernel support matrix](https://source.android.com/docs/core/architecture/kernel/android-common)
 - [Reference Galaxy S8 device tree](https://android.googlesource.com/kernel/common/+/76bdb627cab87dfa1d901810e22ee7fae6d3dc89/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dts)
 
+## Android 17 CDD kernel requirements
+
+The kernel-side requirements of the
+[Android 17 CDD](https://source.android.com/docs/compatibility/17/android-17-cdd)
+and the options that cover them in `exynos8895_dreamlte_defconfig`.
+Options whose dependencies are not met are dropped silently by
+`make *_defconfig`, so check the generated `.config`.
+
+| CDD | Level | Requirement | Options |
+| --- | --- | --- | --- |
+| 9.7 C-0-6 | MUST | seccomp-BPF with TSYNC | `SECCOMP`, `SECCOMP_FILTER` |
+| 9.7 C-0-7 | MUST | Kernel stack overflow protection | `STACKPROTECTOR_STRONG` |
+| 9.7 C-0-8 | MUST | Strict kernel memory permissions | `RODATA_FULL_DEFAULT_ENABLED` |
+| 9.7 C-0-9 | MUST | Hardened usercopy | `HARDENED_USERCOPY` |
+| 9.7 C-0-10/11 | MUST | No kernel execution or access of user memory | `ARM64_PAN`, `ARM64_SW_TTBR0_PAN` |
+| 9.7 C-0-12 | MUST | Kernel page table isolation | `UNMAP_KERNEL_AT_EL0` |
+| 9.7 C-0-13 | MUST | Branch predictor hardening | `HARDEN_BRANCH_PREDICTOR` |
+| 9.7 C-1-1 | MUST | SELinux | `SECURITY_SELINUX` |
+| 9.7 C-SR-2 | SR | KASLR | `RANDOMIZE_BASE` |
+| 9.7 C-SR-3 | SR | Kernel CFI and Shadow Call Stack | `exynos8895_clang_hardening.config` |
+| 9.7 C-SR-6/7 | SR | Stack and heap initialization | `INIT_STACK_ALL_ZERO`, `INIT_ON_ALLOC_DEFAULT_ON` |
+| 9.7 C-SR-12 | SR | Production memory error detection | `KFENCE` |
+| 4 C-0-8 | MUST | Incremental File System | `INCREMENTAL_FS` |
+| 9.9.3.1 | MUST | File-based and metadata encryption | `FS_ENCRYPTION`, `FS_ENCRYPTION_INLINE_CRYPT`, `BLK_INLINE_ENCRYPTION`, `DM_DEFAULT_KEY`, AES-XTS, AES-CTS, Adiantum |
+| 9.10 | MUST | Verified boot, file content verification | `DM_VERITY`, `DM_VERITY_FEC`, `FS_VERITY` |
+
+KASLR and CFI/SCS need a build that supports them. CFI and Shadow Call
+Stack need clang with LTO, so they are a fragment that is not part of
+the defconfig, which the gcc build above would ignore:
+
+```sh
+make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- \
+    exynos8895_dreamlte_defconfig exynos8895_clang_hardening.config
+```
+
+The command line in the defconfig carries `nokaslr`, `console=tty0` and
+`ignore_loglevel` for bring-up. Drop them once the kernel boots.
+
+Not covered here:
+
+- C-SR-9, an IOMMU for each DMA-capable device. This needs a SysMMU driver
+  and device tree nodes for the Exynos 8895, which do not exist yet.
+- Memory tagging (C-SR-15, C-3-x). The Exynos 8895 is ARMv8.0 and has no MTE.
+- `HCTR2` is not in Linux 5.10. AES-256-CBC-CTS covers file name encryption.
+- Verified boot, rollback protection, Keystore, factory reset and OTA
+  are bootloader, TEE or userspace work, not kernel configuration.
+
 ---
 
 # How do I submit patches to Android Common Kernels
