@@ -31,6 +31,32 @@ jobs:
         run: |
           set -o pipefail
           make O=out KCFLAGS=-Wno-error -j"$(nproc)" Image exynos/exynos8895-dreamlte.dtb 2>&1 | tee out/build.log
+      - name: Validate Samsung bootloader inputs
+        run: |
+          python3 - <<'PY'
+          import pathlib, struct
+          image = pathlib.Path("out/arch/arm64/boot/Image").read_bytes()
+          dtb = pathlib.Path("out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb").read_bytes()
+          assert len(image) >= 64 and image[56:60] == b"ARMd", "Invalid ARM64 Image"
+          offset, runtime_size, flags = struct.unpack_from("<QQQ", image, 8)
+          assert runtime_size > 0, "Missing ARM64 runtime size"
+          assert len(dtb) >= 40 and dtb[:4] == bytes.fromhex("d00dfeed"), "Invalid FDT"
+          assert struct.unpack_from(">I", dtb, 4)[0] == len(dtb), "FDT size mismatch"
+          # Samsung DTBH v2: observed in working dreamlte boot and recovery.
+          # One 32-byte entry, with payload aligned to the 2048-byte page.
+          page = 2048
+          padded = lambda n: (n + page - 1) // page * page
+          header = struct.pack("<4sII8I", b"DTBH", 2, 1, 8895,
+                               0x50a6, 0x217584da, 10, 255,
+                               page, padded(len(dtb)), 0x20)
+          dtbh = header.ljust(page, b"\0") + dtb.ljust(padded(len(dtb)), b"\0")
+          pathlib.Path("out/dreamlte-dtbh.img").write_bytes(dtbh)
+          # Boot partition budget includes header, ramdisk and trailer.
+          remaining = 41943040 - page - padded(len(image)) - len(dtbh) - 16
+          assert remaining > 0, "Kernel and DTBH exceed boot partition"
+          print(f"Image={len(image)} runtime={runtime_size} offset={offset:#x} flags={flags:#x}")
+          print(f"DTBH={len(dtbh)} remaining ramdisk budget={remaining}")
+          PY
       - name: Upload build results
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,6 +65,7 @@ jobs:
           path: |
             out/.config
             out/build.log
+            out/dreamlte-dtbh.img
             out/arch/arm64/boot/Image
             out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb
           if-no-files-found: warn
