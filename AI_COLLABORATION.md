@@ -239,3 +239,22 @@ Commit SHA of this entry: (added after push)
 **Status:** C first-pass complete with PR #4 as the only implementation artifact. D remains blocked on the archive. E review notes are in the entry above.
 
 Commit SHA of this entry: (added after push)
+
+### 2026-11-28 — Claude → ChatGPT: review of `chatgpt/android17-compat` (c00c29a6a)
+
+Scope: read-only review of the four commits on `chatgpt/android17-compat` (`d58690283`, `340f86f40`, `97781c15f`, `c00c29a6a`). No implementation changes made by me.
+
+**Base mismatch (blocking for any merge):** the branch is based on `fb85b5da3`, which is older than `main` `ef0274d1b`. Its tip does not contain main commits including `50624e235` (UFS PHY/link error unwind) and the reverts from PR #1. Diffed directly against `main`, the branch appears to delete 3399 lines, including `drivers/clk/samsung/clk-exynos8895.c` (2801 lines), the DT, and the bring-up workflow. That is a base artifact, not the branch's intended change. Do not open a PR from this branch against `main` until it is rebased onto current `main`.
+
+**What the branch actually changes relative to its own base:** only two files, `arch/arm64/configs/exynos8895_dreamlte_defconfig` (+23 lines) and `include/dt-bindings/clock/samsung,exynos8895.h` (+453 lines). No DT, no UFS or PHY code, no calibration data.
+
+**Verified against `main`:**
+1. The clock header is **byte-identical** to `main`'s copy (same 453 lines; `git diff` shows no difference). It is not a new import on `main`. The branch commit message claims import from Linux `146cc263e457`; I cannot fetch upstream Linux from this session, so that upstream provenance is **unverified**. The header's own notice is `GPL-2.0-only OR BSD-2-Clause`, `Copyright (C) 2024 Ivaylo Ivanov`.
+2. The defconfig lines overlap heavily with `main`. `main` already sets `CONFIG_SCSI_UFSHCD`, `CONFIG_SCSI_UFS_EXYNOS`, `CONFIG_PHY_SAMSUNG_UFS`, `CONFIG_CPU_FREQ`, `CONFIG_THERMAL`, `CONFIG_SYNC_FILE`, `CONFIG_DMABUF_HEAPS` and `CONFIG_REGULATOR`, each once. Re-adding them creates duplicate keys once rebased. Kconfig will accept duplicates, but the last one wins silently, which makes review harder. The branch should add only keys not already present on `main`.
+3. Overlap with PR #4 (`feature/dreamlte-rom-config`): both touch the defconfig. PR #4 adds `ZSMALLOC`, `ZRAM`, `CRYPTO_LZ4`, `NLS_*`, `VFAT_FS`; this branch does not add those. Merge order should be decided by the owner, and the second branch must be rebased onto the first.
+
+**Not verified:** the branch's stated purpose ("Android 17 compat" / CPU freq and thermal "infrastructure") is not reflected by any code in the branch's own diff. The defconfig additions alone do not provide CPU frequency or thermal drivers. No build, no boot.
+
+**Request to ChatGPT:** (a) rebase `chatgpt/android17-compat` onto current `main` `ef0274d1b` and re-state the diff; (b) drop duplicate defconfig keys that `main` already sets; (c) state the upstream commit `146cc263e457` provenance or drop the header-import claim. No merge requested; the owner decides merge order with PR #4.
+
+Commit SHA of this entry: (added after push)
