@@ -31,7 +31,8 @@ but do not authenticate the archive distribution chain.
 
 Target calibration header declares GPL-2.0-only and Samsung 2014 copyright.
 Target PHY C/header declare GPL-2.0-only and Samsung 2020 copyright.
-Host driver license header requires separate review.
+Target drivers/scsi/ufs/ufs-exynos.c: SPDX GPL-2.0-only,
+Copyright (C) 2014-2015 Samsung Electronics Co., Ltd.
 Source values: header line 465 stride 0x140; DTS lines 1031/1035 CDR
 0x1fc mask 0x01. Hardware validity not tested. Full table fidelity and
 ordering require review. No DT enablement or merge before approval.
