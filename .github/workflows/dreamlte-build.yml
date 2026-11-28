@@ -1,0 +1,112 @@
+name: dreamlte build
+
+# Compiles the Galaxy S8 (dreamlte) kernel and DTB so that build results
+# exist without a local cross toolchain. Runs on ci/** branches and on demand.
+on:
+  push:
+    branches: ["ci/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gcc:
+    name: gcc defconfig, Image and DTB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison bc libssl-dev \
+            libelf-dev gcc-aarch64-linux-gnu device-tree-compiler
+
+      - name: Configure
+        run: |
+          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+            exynos8895_dreamlte_defconfig
+
+      - name: Check requested options survived defconfig
+        run: |
+          # Options silently dropped when a dependency is unmet show up here.
+          for s in BPF_EVENTS KPROBE_EVENTS NET_SCH_INGRESS NET_CLS_MATCHALL \
+                   DM_VERITY FS_VERITY FS_ENCRYPTION_INLINE_CRYPT ZRAM \
+                   STACKPROTECTOR_STRONG HARDENED_USERCOPY KFENCE \
+                   RANDOMIZE_BASE INCREMENTAL_FS ANDROID_BINDERFS; do
+            if grep -q "^CONFIG_${s}=[ym]" out/.config; then
+              echo "ok      CONFIG_${s}"
+            else
+              echo "MISSING CONFIG_${s}"
+            fi
+          done | tee out/options-check.txt
+
+      - name: Build Image and DTB
+        run: |
+          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+            KCFLAGS=-Wno-error -j"$(nproc)" Image exynos/exynos8895-dreamlte.dtb
+
+      - name: Record outputs
+        if: always()
+        run: |
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "gcc: $(aarch64-linux-gnu-gcc --version | head -1)"
+            ls -l out/arch/arm64/boot/Image out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb 2>&1
+          } | tee out/build-record.txt
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamlte-gcc-${{ github.sha }}
+          path: |
+            out/arch/arm64/boot/Image
+            out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb
+            out/.config
+            out/options-check.txt
+            out/build-record.txt
+          if-no-files-found: warn
+
+  clang-hardening:
+    name: clang LTO, CFI and Shadow Call Stack fragment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison bc libssl-dev \
+            libelf-dev clang lld llvm device-tree-compiler gcc-aarch64-linux-gnu
+
+      - name: Configure with the hardening fragment
+        run: |
+          make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- \
+            exynos8895_dreamlte_defconfig exynos8895_clang_hardening.config
+
+      - name: Check CFI and SCS
+        run: |
+          for s in LTO_CLANG_THIN CFI_CLANG SHADOW_CALL_STACK; do
+            grep -q "^CONFIG_${s}=y" out/.config && echo "ok      CONFIG_${s}" \
+              || echo "MISSING CONFIG_${s}"
+          done
+
+      - name: Build Image
+        run: |
+          make O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- \
+            KCFLAGS=-Wno-error -j"$(nproc)" Image exynos/exynos8895-dreamlte.dtb
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamlte-clang-${{ github.sha }}
+          path: |
+            out/arch/arm64/boot/Image
+            out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb
+            out/.config
+          if-no-files-found: warn
