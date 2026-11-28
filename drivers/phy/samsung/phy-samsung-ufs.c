@@ -186,7 +186,7 @@ static int samsung_ufs_phy_clks_init(struct samsung_ufs_phy *phy)
 
 	phy->ref_clk = devm_clk_get(phy->dev, "ref_clk");
 	if (IS_ERR(phy->ref_clk))
-		dev_err(phy->dev, "failed to get ref_clk clock\n");
+		return PTR_ERR(phy->ref_clk);
 
 	ret = clk_prepare_enable(phy->ref_clk);
 	if (ret) {
@@ -210,17 +210,24 @@ static int samsung_ufs_phy_init(struct phy *phy)
 	if (ss_phy->drvdata->has_symbol_clk) {
 		ret = samsung_ufs_phy_symbol_clk_init(ss_phy);
 		if (ret)
-			dev_err(ss_phy->dev, "failed to set ufs phy symbol clocks\n");
+			return ret;
 	}
 
 	ret = samsung_ufs_phy_clks_init(ss_phy);
 	if (ret)
-		dev_err(ss_phy->dev, "failed to set ufs phy clocks\n");
+		goto disable_symbols;
 
 	ret = samsung_ufs_phy_calibrate(phy);
-	if (ret)
-		dev_err(ss_phy->dev, "ufs phy calibration failed\n");
+	if (!ret)
+		return 0;
 
+	clk_disable_unprepare(ss_phy->ref_clk);
+disable_symbols:
+	if (ss_phy->drvdata->has_symbol_clk) {
+		clk_disable_unprepare(ss_phy->rx1_symbol_clk);
+		clk_disable_unprepare(ss_phy->rx0_symbol_clk);
+		clk_disable_unprepare(ss_phy->tx0_symbol_clk);
+	}
 	return ret;
 }
 
