@@ -946,6 +946,50 @@ static void exynos_ufs_specify_nexus_t_tm_req(struct ufs_hba *hba,
 	}
 }
 
+/* Galaxy S8 vendor DTS phy-init and post-phy-init PCS/UniPro entries. */
+static int exynos8895_link_cal(struct exynos_ufs *ufs, bool pre)
+{
+	struct ufs_hba *hba = ufs->hba;
+	static const u32 rx_pre[][2] = {{0x5c,0x38},{0x0f,0},{0x65,1},{0x69,1},{0x21,0},{0x22,0},{0x84,1}};
+	static const u32 rx_post[][2] = {{0x35,5},{0x73,1},{0x41,2},{0x42,0xac}};
+	int ret, i, lane;
+#define SET_MIB(a, sel, v) do { ret = ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(a, sel), v); if (ret) return ret; } while (0)
+	if (!ufs->mclk_rate || !ufs->pclk_rate) return -EINVAL;
+	if (pre) {
+		SET_MIB(0x9514, 0, NSEC_PER_SEC / ufs->mclk_rate);
+	} else {
+		SET_MIB(0x9529, 0, 1);
+		ret = ufshcd_dme_set(hba, UIC_ARG_MIB(0x15a4), 0xfa);
+		if (ufshcd_dme_set(hba, UIC_ARG_MIB(0x9529), 0) && !ret) ret = -EIO;
+		if (ret) return ret;
+	}
+	SET_MIB(0x200, 0, 0x40);
+	for (lane = 0; lane < ufs->avail_ln_rx; lane++) {
+		if (pre) {
+			SET_MIB(0x12, 4 + lane, NSEC_PER_SEC / ufs->pclk_rate);
+			SET_MIB(0xaa, lane, NSEC_PER_SEC / ufs->pclk_rate);
+			for (i = 0; i < ARRAY_SIZE(rx_pre); i++)
+				SET_MIB(rx_pre[i][0], 4 + lane, rx_pre[i][1]);
+			SET_MIB(0x04, lane, 1);
+		} else {
+			for (i = 0; i < ARRAY_SIZE(rx_post); i++)
+				SET_MIB(rx_post[i][0], 4 + lane, rx_post[i][1]);
+		}
+	}
+	SET_MIB(0x200, 0, 0);
+	if (pre) {
+		SET_MIB(0x9536, 0, 0x4e20);
+		SET_MIB(0x9564, 0, 0x2e820183);
+		SET_MIB(0x155e, 0, 0);
+		SET_MIB(0x3000, 0, 0);
+		SET_MIB(0x3001, 0, 1);
+		SET_MIB(0x4021, 0, 1);
+		SET_MIB(0x4020, 0, 1);
+	}
+#undef SET_MIB
+	return 0;
+}
+
 static int exynos_ufs_phy_init(struct exynos_ufs *ufs)
 {
 	struct ufs_hba *hba = ufs->hba;
@@ -962,6 +1006,11 @@ static int exynos_ufs_phy_init(struct exynos_ufs *ufs)
 			ufs->avail_ln_rx, ufs->avail_ln_tx);
 	}
 
+	if (exynos8895_ufs(ufs)) {
+		if (!ufs->avail_ln_rx || ufs->avail_ln_rx > 2 || ufs->avail_ln_rx != ufs->avail_ln_tx) return -EINVAL;
+		ret = exynos8895_link_cal(ufs, true);
+		if (ret) return ret;
+	}
 	phy_set_bus_width(generic_phy, ufs->avail_ln_rx);
 	ret = phy_init(generic_phy);
 	if (ret) {
@@ -1124,6 +1173,10 @@ static int exynos_ufs_post_link(struct ufs_hba *hba)
 		}
 	}
 
+	if (exynos8895_ufs(ufs)) {
+		ret = exynos8895_link_cal(ufs, false);
+		if (ret) return ret;
+	}
 	ret = phy_calibrate(generic_phy);
 	if (ret) return ret;
 
