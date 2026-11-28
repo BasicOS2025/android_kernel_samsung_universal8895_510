@@ -47,6 +47,47 @@
 		#size-cells = <1>;
 		ranges;
 
+		/* Protect firmware/shared regions from the stock dreamlte DTB. */
+		tima@b1000000 {
+			reg = <0 0xb1000000 0x200000>;
+			no-map;
+		};
+
+		seclog@c0000000 {
+			reg = <0 0xc0000000 0x10000>;
+			no-map;
+		};
+
+		secure-camera@d0000000 {
+			reg = <0 0xd0000000 0x1400000>;
+			no-map;
+		};
+
+		tui@e7400000 {
+			reg = <0 0xe7400000 0x3400000>;
+			no-map;
+		};
+
+		crypto@f3400000 {
+			reg = <0 0xf3400000 0x1800000>;
+			no-map;
+		};
+
+		modem@f4c00000 {
+			reg = <0 0xf4c00000 0x9000000>;
+			no-map;
+		};
+
+		cp-logging@fdc00000 {
+			reg = <0 0xfdc00000 0x2000000>;
+			no-map;
+		};
+
+		gnss@ffc00000 {
+			reg = <0 0xffc00000 0x400000>;
+			no-map;
+		};
+
 		ramoops@92000000 {
 			compatible = "ramoops";
 			reg = <0 0x92000000 0x8000>;
