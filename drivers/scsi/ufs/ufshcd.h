@@ -637,6 +637,9 @@ enum ufshcd_quirks {
 	 * keys were stored in it.
 	 */
 	UFSHCD_QUIRK_KEYS_IN_PRDT			= 1 << 22,
+
+	/* Abort link startup when the pre-link callback fails. */
+	UFSHCD_QUIRK_STRICT_PRE_LINK			= 1 << 23,
 };
 
 enum ufshcd_caps {

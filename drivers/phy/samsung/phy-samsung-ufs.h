@@ -118,6 +118,7 @@ struct samsung_ufs_phy {
 	struct samsung_ufs_phy_cfg **cfg;
 	const struct pmu_isol *isol;
 	u8 lane_cnt;
+	u8 gear;
 	int ufs_phy_state;
 	enum phy_mode mode;
 };
