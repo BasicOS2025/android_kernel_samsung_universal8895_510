@@ -20,6 +20,13 @@
 #include <linux/regmap.h>
 
 #include "phy-samsung-ufs.h"
+#include "phy-exynos8895-ufs-cal.h"
+
+static const struct samsung_ufs_phy_cfg *exynos8895_cfg[CFG_TAG_MAX];
+static const struct samsung_ufs_phy_drvdata exynos8895_ufs_phy = {
+	.cfg = exynos8895_cfg,
+	.isol = { .offset = 0x724, .mask = BIT(0), .en = BIT(0) },
+};
 
 #define for_each_phy_lane(phy, i) \
 	for (i = 0; i < (phy)->lane_cnt; i++)
@@ -72,6 +79,48 @@ out:
 	return err;
 }
 
+static int exynos8895_calibrate(struct samsung_ufs_phy *p)
+{
+	const struct samsung_ufs_phy_cfg *cfg = NULL;
+	u32 val;
+	int i;
+
+	switch (p->ufs_phy_state) {
+	case CFG_PRE_INIT: cfg = exynos8895_pma_init; break;
+	case CFG_POST_INIT: break;
+	case CFG_PRE_PWR_HS:
+		if (p->mode == PHY_MODE_INVALID)
+			cfg = exynos8895_pma_pwm;
+		else if (p->mode == PHY_MODE_UFS_HS_A || p->mode == PHY_MODE_UFS_HS_B) {
+			if (p->lane_cnt == 1) cfg = exynos8895_pma_hs_single;
+			else switch (p->gear) {
+			case 1: cfg = exynos8895_pma_hs_g1_l2; break;
+			case 2: cfg = exynos8895_pma_hs_g2_l2; break;
+			case 3: cfg = exynos8895_pma_hs_g3_l2; break;
+			default: return -EINVAL;
+			}
+		} else return -EINVAL;
+		break;
+	case CFG_POST_PWR_HS:
+		if (p->mode != PHY_MODE_INVALID) {
+			int ret = readl_poll_timeout(p->reg_pma + EXYNOS8895_CDR_REG, val,
+				(val & EXYNOS8895_CDR_MASK) == EXYNOS8895_CDR_MASK,
+				10, EXYNOS8895_CDR_TIMEOUT_US);
+			if (ret) return ret;
+		}
+		p->ufs_phy_state = CFG_PRE_PWR_HS;
+		return 0;
+	default: return -EINVAL;
+	}
+	if (cfg)
+		for_each_phy_cfg(cfg)
+			for_each_phy_lane(p, i)
+				samsung_ufs_phy_config(p, cfg, i);
+	if (p->ufs_phy_state == CFG_PRE_INIT) udelay(200);
+	p->ufs_phy_state++;
+	return 0;
+}
+
 static int samsung_ufs_phy_calibrate(struct phy *phy)
 {
 	struct samsung_ufs_phy *ufs_phy = get_samsung_ufs_phy(phy);
@@ -79,6 +128,9 @@ static int samsung_ufs_phy_calibrate(struct phy *phy)
 	const struct samsung_ufs_phy_cfg *cfg;
 	int err = 0;
 	int i;
+
+	if (ufs_phy->drvdata == &exynos8895_ufs_phy)
+		return exynos8895_calibrate(ufs_phy);
 
 	if (unlikely(ufs_phy->ufs_phy_state < CFG_PRE_INIT ||
 		     ufs_phy->ufs_phy_state >= CFG_TAG_MAX)) {
@@ -258,6 +310,15 @@ static int samsung_ufs_phy_set_mode(struct phy *generic_phy,
 {
 	struct samsung_ufs_phy *ss_phy = get_samsung_ufs_phy(generic_phy);
 
+	if (ss_phy->drvdata == &exynos8895_ufs_phy) {
+		if (submode < 1 || submode > 3) return -EINVAL;
+		if (generic_phy->attrs.bus_width < 1 || generic_phy->attrs.bus_width > 2) return -EINVAL;
+		ss_phy->gear = submode;
+		ss_phy->lane_cnt = generic_phy->attrs.bus_width;
+		ss_phy->mode = mode;
+		return 0;
+	}
+
 	ss_phy->mode = PHY_MODE_INVALID;
 
 	if (mode > 0)
@@ -357,6 +418,7 @@ out:
 }
 
 static const struct of_device_id samsung_ufs_phy_match[] = {
+	{ .compatible = "samsung,exynos8895-ufs-phy", .data = &exynos8895_ufs_phy },
 	{
 		.compatible = "samsung,exynos7-ufs-phy",
 		.data = &exynos7_ufs_phy,
