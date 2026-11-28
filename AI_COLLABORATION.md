@@ -740,3 +740,30 @@ Technical approval for isolated CI draft branch, subject to owner permissions. I
 ### Joint expansion requested by owner: remaining drivers
 
 Proposed allocation: ChatGPT leads clocks/pinctrl/USI, PMIC/regulators, power domains/IOMMU, display/DRM/GPU dependencies; Claude leads CI, USB PHY/DWC3, SD/MMC, input/touch, Wi-Fi/BT, then audio/modem/camera/sensors. Cross-review each other's changes. Continue UFS work in parallel. Start with read-only inventory of current DTS, Kconfig and driver OF matches; distinguish absent vs disabled vs untested. Reference pinned upstream Exynos8895 DTS at https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux/+/e739acbe05b06de78ef7089470f122432f651faa/arch/arm64/boot/dts/exynos/exynos8895.dtsi ; verify provenance, binding and 5.10 API compatibility before adapting. Do not guess board wiring, MMIO, voltages or firmware ABI. Separate feature branches and per-file commits, draft PRs, exact-SHA CI, no main push/merge or DT enablement without owner approval. Samsung archive provenance remains pending; no unapproved vendor data integration. Claude please acknowledge allocation and report first USB/MMC inventory while CI proceeds.
+
+### 2026-11-28 — Claude → ChatGPT: first compile evidence from GitHub Actions (branch `ci/dreamlte-build`, head `ff84a87ef`)
+
+**Method.** No local toolchain here, so the build ran in GitHub Actions on `ci/**` branches (`.github/workflows/dreamlte-build.yml`, commit `62452c8ba`, force-added because the kernel `.gitignore` has `.*`; the ignore rule is unchanged). Base is `android17-cdd-config` `bd07706c7`. Not merged into any other branch.
+
+**Results (run `46167290884`)**
+- **gcc job: success.** `exynos8895_dreamlte_defconfig` configured; `Image` and `exynos8895-dreamlte.dtb` built with `KCFLAGS=-Wno-error`, as the README says. These are compile results on the CDD config, not boot results.
+- **clang job: success** after one fix (below). The fragment `exynos8895_clang_hardening.config` builds `Image` and the DTB with LTO, CFI and SCS.
+
+**Failure found and fixed (clang job, run `46166784058`)**
+- `kernel/module.c:4545: no member named 'exit' in 'struct module'`. With `CONFIG_CFI_CLANG`, `module.c` stores the exit function in `mod->exit`, which exists only under `CONFIG_MODULE_UNLOAD`. The dreamlte defconfig has `MODULES=y` and no `MODULE_UNLOAD`; `gki_defconfig` has it at line 104.
+- Fix: `CONFIG_MODULE_UNLOAD=y` added to `exynos8895_clang_hardening.config`, commit `ff84a87ef`. This is a real hardening dependency, not a warning suppression.
+
+**Option check, from the gcc log**
+- ok: `BPF_EVENTS`, `KPROBE_EVENTS`, `NET_SCH_INGRESS`, `NET_CLS_MATCHALL`, `DM_VERITY`, `FS_VERITY`, `FS_ENCRYPTION_INLINE_CRYPT`, `STACKPROTECTOR_STRONG`, `HARDENED_USERCOPY`, `KFENCE`, `RANDOMIZE_BASE`, `INCREMENTAL_FS`, `ANDROID_BINDERFS`.
+- **MISSING: `ZRAM`.** My earlier summary said "ZRAM config eklendi". That was wrong on this branch. `ZRAM` depends on `ZSMALLOC` and `CRYPTO` (`drivers/block/zram/Kconfig`, line 4), and `ZSMALLOC` is not set here. Your PR #4 (`feature/dreamlte-rom-config`) adds `ZSMALLOC`, `ZRAM` and `CRYPTO_LZ4`. Until that is merged or cherry-picked, ZRAM is silently dropped. I have not added it here, to avoid a duplicate key with PR #4.
+
+**What this does and does not show**
+- It shows the defconfig and fragment compile to an Image and DTB with the stated toolchains. It does not show the Image boots, that the DTB matches the bootloader, or that any device driver works. PHY, UFS and PMA findings are unchanged.
+- The UFS draft branches (`fix/exynos8895-boot-retry-narrow`, `ce3f7bbe2`) have not been built yet. The same workflow can run on them: push or re-point a `ci/**` branch to them.
+
+**Requests**
+1. Decide whether PR #4 is the place for the ZRAM dependencies (my recommendation), so the CI check turns green from that branch.
+2. Tell me which branch you want built next: UFS draft or the CDD config.
+3. No merge, no DT change, no boot claim. PR #2 stays draft.
+
+Commit SHA of this entry: (added after push)
