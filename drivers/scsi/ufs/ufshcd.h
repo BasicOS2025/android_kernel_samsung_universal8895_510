@@ -829,6 +829,8 @@ struct ufs_hba_monitor {
  * @ksm: the keyslot manager tied to this hba
  */
 struct ufs_hba {
+	/* Set when a strict pre-link failure aborted link startup. */
+	bool pre_link_failed;
 	void __iomem *mmio_base;
 
 	/* Virtual memory reference */

@@ -4825,6 +4825,8 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 	int retries = DME_LINKSTARTUP_RETRIES;
 	bool link_startup_again = false;
 
+	hba->pre_link_failed = false;
+
 	/*
 	 * If UFS device isn't active then we will have to issue link startup
 	 * 2 times to make sure the device state move to active.
@@ -4836,6 +4838,7 @@ link_startup:
 	do {
 		ret = ufshcd_vops_link_startup_notify(hba, PRE_CHANGE);
 		if (ret && (hba->quirks & UFSHCD_QUIRK_STRICT_PRE_LINK)) {
+			hba->pre_link_failed = true;
 			ufshcd_update_evt_hist(hba, UFS_EVT_LINK_STARTUP_FAIL,
 					       (u32)ret);
 			goto out;
@@ -8386,6 +8389,13 @@ out:
 	return ret;
 }
 
+/*
+ * Extra boot probe attempts for a strict pre-link failure only. The
+ * PRE_CHANGE failure is flagged in hba->pre_link_failed by
+ * ufshcd_link_startup(); no errno value is inspected.
+ */
+#define BOOT_PROBE_STRICT_RETRIES	2
+
 /**
  * ufshcd_async_scan - asynchronous execution for probing hba
  * @data: data pointer to pass to this function
@@ -8395,10 +8405,24 @@ static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 {
 	struct ufs_hba *hba = (struct ufs_hba *)data;
 	int ret;
+	int retry;
 
 	down(&hba->host_sem);
 	/* Initialize hba, detect and initialize UFS device */
+	hba->pre_link_failed = false;
 	ret = ufshcd_probe_hba(hba, true);
+
+	for (retry = 0; ret && hba->pre_link_failed &&
+	     retry < BOOT_PROBE_STRICT_RETRIES; retry++) {
+		dev_warn(hba->dev, "%s: pre-link calibration failed (%d), host reset retry %d/%d\n",
+			 __func__, ret, retry + 1, BOOT_PROBE_STRICT_RETRIES);
+		ufshcd_hba_stop(hba);
+		ret = ufshcd_hba_enable(hba);
+		if (!ret) {
+			hba->pre_link_failed = false;
+			ret = ufshcd_probe_hba(hba, true);
+		}
+	}
 	up(&hba->host_sem);
 	if (ret)
 		goto out;
