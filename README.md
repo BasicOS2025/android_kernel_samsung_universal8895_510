@@ -94,9 +94,10 @@ Options whose dependencies are not met are dropped silently by
 | 9.7 C-SR-3 | SR | Kernel CFI and Shadow Call Stack | `exynos8895_clang_hardening.config` |
 | 9.7 C-SR-6/7 | SR | Stack and heap initialization | `INIT_STACK_ALL_ZERO`, `INIT_ON_ALLOC_DEFAULT_ON` |
 | 9.7 C-SR-12 | SR | Production memory error detection | `KFENCE` |
-| 4 C-0-8 | MUST | Incremental File System | `INCREMENTAL_FS` |
 | 9.9.3.1 | MUST | File-based and metadata encryption | `FS_ENCRYPTION`, `FS_ENCRYPTION_INLINE_CRYPT`, `BLK_INLINE_ENCRYPTION`, `DM_DEFAULT_KEY`, AES-XTS, AES-CTS, Adiantum |
 | 9.10 | MUST | Verified boot, file content verification | `DM_VERITY`, `DM_VERITY_FEC`, `FS_VERITY` |
+
+Incremental FS (`INCREMENTAL_FS`) is enabled in the defconfig, but no CDD requirement is cited for it: its section was not verified, so it is not listed as a mandatory requirement.
 
 KASLR and CFI/SCS need a build that supports them. CFI and Shadow Call
 Stack need clang with LTO, so they are a fragment that is not part of
