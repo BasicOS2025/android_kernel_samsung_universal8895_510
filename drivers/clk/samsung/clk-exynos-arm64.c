@@ -35,7 +35,7 @@ int __init exynos_arm64_register_cmu(struct device *dev,
 		if (ret) {
 			clk_put(bus);
 			pr_err("%pOF: CMU bus enable failed: %d\n", np, ret);
-			return;
+			return ret;
 		}
 		/* CMU register access requires this clock for its lifetime. */
 	}
@@ -47,7 +47,7 @@ int __init exynos_arm64_register_cmu(struct device *dev,
 			clk_disable_unprepare(bus);
 			clk_put(bus);
 		}
-		return;
+		return -ENOMEM;
 	}
 	for (i = 0; i < cmu->nr_clk_regs; i++) {
 		unsigned long off = cmu->clk_regs[i];
