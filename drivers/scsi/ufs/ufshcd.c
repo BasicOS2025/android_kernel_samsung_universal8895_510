@@ -8386,6 +8386,12 @@ out:
 	return ret;
 }
 
+/*
+ * Extra boot probe attempts, each after a host reset, for variants that
+ * abort link startup on a pre-link failure (UFSHCD_QUIRK_STRICT_PRE_LINK).
+ */
+#define BOOT_PROBE_STRICT_RETRIES	2
+
 /**
  * ufshcd_async_scan - asynchronous execution for probing hba
  * @data: data pointer to pass to this function
@@ -8395,10 +8401,25 @@ static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 {
 	struct ufs_hba *hba = (struct ufs_hba *)data;
 	int ret;
+	int retry;
 
 	down(&hba->host_sem);
 	/* Initialize hba, detect and initialize UFS device */
 	ret = ufshcd_probe_hba(hba, true);
+
+	/*
+	 * The probe does not schedule the error handler, so a strict pre-link
+	 * failure at boot would otherwise leave no logical units at all.
+	 */
+	for (retry = 0; ret && retry < BOOT_PROBE_STRICT_RETRIES &&
+	     (hba->quirks & UFSHCD_QUIRK_STRICT_PRE_LINK); retry++) {
+		dev_warn(hba->dev, "%s: boot probe failed (%d), host reset retry %d/%d\n",
+			 __func__, ret, retry + 1, BOOT_PROBE_STRICT_RETRIES);
+		ufshcd_hba_stop(hba);
+		ret = ufshcd_hba_enable(hba);
+		if (!ret)
+			ret = ufshcd_probe_hba(hba, true);
+	}
 	up(&hba->host_sem);
 	if (ret)
 		goto out;
