@@ -253,6 +253,16 @@
 			clock-names = "oscclk";
 		};
 
+		/* Vendor firmware IPC ABI is not yet supported by this kernel. */
+		acpm_ipc: mailbox@16440000 {
+			compatible = "samsung,exynos-acpm-ipc";
+			reg = <0x16440000 0x1000>, <0x16500000 0xb400>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
+			initdata-base = <0x2850>;
+			num-timestamps = <32>;
+			status = "disabled";
+		};
+
 		pmu_system_controller: system-controller@16480000 {
 			compatible = "samsung,exynos8895-pmu",
 				     "samsung,exynos7-pmu", "syscon";
