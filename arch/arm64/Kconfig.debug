@@ -20,4 +20,34 @@ config ARM64_RELOC_TEST
 	depends on m
 	tristate "Relocation testing module"
 
+config ARM64_EARLY_FB_DEBUG
+	bool "Mark early boot progress in the bootloader framebuffer"
+	help
+	  Paint coloured bands into the framebuffer the bootloader left
+	  behind at several points of the primary CPU's early boot path in
+	  head.S, which runs with the MMU off. Counting the bands on the
+	  screen tells how far the kernel got when it hangs before any
+	  console exists. Only for SoC bring-up; say N otherwise.
+
+	  Band 0 (white) is painted on entry to the kernel, band 1 (red)
+	  after init_kernel_el, band 2 (green) after the early page tables
+	  are built and band 3 (blue) after __cpu_setup, just before the
+	  MMU is turned on. Colours may be swapped if the display uses a
+	  different channel order.
+
+config ARM64_EARLY_FB_BASE
+	hex "Physical base address of the bootloader framebuffer"
+	depends on ARM64_EARLY_FB_DEBUG
+	default 0xcc000000
+	help
+	  Must match the framebuffer region of the device tree.
+
+config ARM64_EARLY_FB_STRIDE
+	int "Framebuffer stride in bytes"
+	depends on ARM64_EARLY_FB_DEBUG
+	default 5760
+	help
+	  Bytes per framebuffer row, 4 bytes per pixel. 5760 is 1440 pixels
+	  of the Galaxy S8 panel.
+
 source "drivers/hwtracing/coresight/Kconfig"

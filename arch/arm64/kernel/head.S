@@ -102,13 +102,38 @@ pe_header:
 	 *  x19/x20    __primary_switch()                       callee preserved temp registers
 	 *  x24        __primary_switch() .. relocate_kernel()  current RELR displacement
 	 */
+#ifdef CONFIG_ARM64_EARLY_FB_DEBUG
+	/*
+	 * fb_mark band, color: paint a band of 24 framebuffer rows with a
+	 * 32-bit pixel value. Runs with the MMU off, so the framebuffer is
+	 * addressed physically. Clobbers x9-x11 and the condition flags, and
+	 * leaves x0-x3 (boot arguments) and the callee-saved registers alone.
+	 */
+	.macro	fb_mark, band, color
+	ldr	x9, =(CONFIG_ARM64_EARLY_FB_BASE + (\band * 24 * CONFIG_ARM64_EARLY_FB_STRIDE))
+	ldr	w10, =\color
+	orr	x10, x10, x10, lsl #32
+	mov	x11, #((24 * CONFIG_ARM64_EARLY_FB_STRIDE) / 16)
+1:	stp	x10, x10, [x9], #16
+	subs	x11, x11, #1
+	b.ne	1b
+	dsb	sy
+	.endm
+#else
+	.macro	fb_mark, band, color
+	.endm
+#endif
+
 SYM_CODE_START(primary_entry)
+	fb_mark	0, 0xffffffff			// white: kernel entered
 	bl	preserve_boot_args
 	bl	init_kernel_el			// w0=cpu_boot_mode
+	fb_mark	1, 0xffff0000			// red: init_kernel_el returned
 	adrp	x23, __PHYS_OFFSET
 	and	x23, x23, MIN_KIMG_ALIGN - 1	// KASLR offset, defaults to 0
 	bl	set_cpu_boot_mode_flag
 	bl	__create_page_tables
+	fb_mark	2, 0xff00ff00			// green: early page tables built
 	/*
 	 * The following calls CPU setup code, see arch/arm64/mm/proc.S for
 	 * details.
@@ -116,6 +141,7 @@ SYM_CODE_START(primary_entry)
 	 * the TCR will have been set.
 	 */
 	bl	__cpu_setup			// initialise processor
+	fb_mark	3, 0xff0000ff			// blue: about to enable the MMU
 	b	__primary_switch
 SYM_CODE_END(primary_entry)
 
