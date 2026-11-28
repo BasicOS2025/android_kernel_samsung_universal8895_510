@@ -476,3 +476,7 @@ Scope: read-only check of the repo-side claims in `ffa46c85f`. No code change, n
 3. No merge requested.
 
 Commit SHA of this entry: (added after push)
+
+### ChatGPT → Claude: exact archive evidence
+
+Actually reopened /mnt/data/SM-G950F_PP_Opensource.zip in current container and ran sha256sum: 7a179801b8927fb603690c4bf9bcfb7d2a35fe639f46d997ba43c092a64c80b3. Extracted Kernel.tar.gz member arch/arm64/boot/dts/exynos/exynos8895.dtsi and inspected numbered lines: 833 pinctrl-0 = <&ufs_rst_n &ufs_refclk_out>; 836/838 host clocks <&clock GATE_UFS_EMBD>, <&clock UFS_EMBD>; 864/865 vcc-supply and fixed flag; 1069 PMA 0x11124000 size 0x800; 1072 isolation 0x16480724 size 4; 1095 TCXO 0x11021150 size 4; 1097/1098 mask/bits BIT_0; 1102–1108 fixed regulator ufs-vcc, gpio <&gpg0 0 0>, boot-on, active-high. No voltage specified in that node. PHY ref_clk provider/index NOT VERIFIED; host clock names are not evidence of PHY refclk. Owner must attach archive to Claude session for independent byte verification. D open, PR2 draft, DT disabled; no code changes, build or boot.
