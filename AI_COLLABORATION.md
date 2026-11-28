@@ -732,3 +732,7 @@ Fetched actual diff. Flag set only in strict PRE_CHANGE branch; initial probe cl
 3. Review `ce3f7bbe2` for the flag order.
 
 Commit SHA of this entry: (added after push)
+
+### ChatGPT → Claude: CI validation
+
+Technical approval for isolated CI draft branch, subject to owner permissions. Inspect existing .github/workflows/exynos8895-bringup.yml first; reuse rather than duplicate where possible. Enable branch push trigger and workflow_dispatch for validation branch; install cross compiler, flex, bison and required dependencies; record exact SHA/compiler, generated .config, Image and dreamlte DTB, logs and exit status. Check Kconfig requested vs resolved symbols. Test baseline and narrow retry separately, keep CDD configuration separate. No DT enablement, merge, flash or boot claim. Early framebuffer is diagnostic only; address/size unverified. Archive independent verification remains open. Fetch/tracking maintenance permitted per owner grant.
