@@ -437,7 +437,7 @@ static int exynos_ufs_get_clk_info(struct exynos_ufs *ufs)
 	int ret = 0;
 
 	if (list_empty(head))
-		goto out;
+		return -EINVAL;
 
 	list_for_each_entry(clki, head, list) {
 		if (!IS_ERR(clki->clk)) {
@@ -456,6 +456,8 @@ static int exynos_ufs_get_clk_info(struct exynos_ufs *ufs)
 
 	ufs->mclk_rate = clk_get_rate(ufs->clk_unipro_main);
 	pclk_rate = clk_get_rate(ufs->clk_hci_core);
+	if (!ufs->mclk_rate || !pclk_rate)
+		return -EINVAL;
 	f_min = ufs->pclk_avail_min;
 	f_max = ufs->pclk_avail_max;
 
@@ -920,15 +922,10 @@ static int exynos_ufs_phy_init(struct exynos_ufs *ufs)
 	if (ret) {
 		dev_err(hba->dev, "%s: phy init failed, ret = %d\n",
 			__func__, ret);
-		goto out_exit_phy;
+		return ret;
 	}
 
 	return 0;
-
-out_exit_phy:
-	phy_exit(generic_phy);
-
-	return ret;
 }
 
 static void exynos_ufs_config_unipro(struct exynos_ufs *ufs)
@@ -988,6 +985,7 @@ static int exynos_ufs_setup_clocks(struct ufs_hba *hba, bool on,
 static int exynos_ufs_pre_link(struct ufs_hba *hba)
 {
 	struct exynos_ufs *ufs = ufshcd_get_variant(hba);
+	int ret;
 
 	/* hci */
 	exynos_ufs_config_intr(ufs, DFES_DEF_L2_ERRS, UNIPRO_L2);
@@ -999,7 +997,9 @@ static int exynos_ufs_pre_link(struct ufs_hba *hba)
 	exynos_ufs_config_unipro(ufs);
 
 	/* m-phy */
-	exynos_ufs_phy_init(ufs);
+	ret = exynos_ufs_phy_init(ufs);
+	if (ret)
+		return ret;
 	if (!(ufs->opts & EXYNOS_UFS_OPT_SKIP_CONFIG_PHY_ATTR)) {
 		exynos_ufs_config_phy_time_attr(ufs);
 		exynos_ufs_config_phy_cap_attr(ufs);
@@ -1008,7 +1008,7 @@ static int exynos_ufs_pre_link(struct ufs_hba *hba)
 	exynos_ufs_setup_clocks(hba, true, PRE_CHANGE);
 
 	if (ufs->drv_data->pre_link)
-		ufs->drv_data->pre_link(ufs);
+		return ufs->drv_data->pre_link(ufs);
 
 	return 0;
 }
@@ -1186,7 +1186,7 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 
 	ret = phy_power_on(ufs->phy);
 	if (ret)
-		goto phy_off;
+		goto out;
 
 	exynos_ufs_priv_init(hba, ufs);
 
@@ -1194,13 +1194,13 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 		ret = ufs->drv_data->drv_init(dev, ufs);
 		if (ret) {
 			dev_err(dev, "failed to init drv-data\n");
-			goto out;
+			goto phy_off;
 		}
 	}
 
 	ret = exynos_ufs_get_clk_info(ufs);
 	if (ret)
-		goto out;
+		goto phy_off;
 	exynos_ufs_specify_phy_time_attr(ufs);
 	exynos_ufs_config_smu(ufs);
 	return 0;
