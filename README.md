@@ -59,8 +59,8 @@ the LineageOS first-stage ramdisk or Samsung fstab.
 
 The pinned LineageOS device fstab needs
 `/dev/block/platform/11120000.ufs/by-name/SYSTEM` at first-stage
-mount. The 5.10 Exynos UFS driver now includes an experimental Exynos8895 host
-match and FSYS0 coherency configuration. Complete the controller and PHY,
+mount. The current 5.10 Exynos UFS driver matches Exynos 7 and
+Auto v9 controllers. Bring up the real Exynos 8895 controller, PHY,
 clocks and regulators, and verify the Android block-device path
 on hardware before switching the ROM manifest to this kernel.
 Check that the physical bootloader hands control to the 5.10
