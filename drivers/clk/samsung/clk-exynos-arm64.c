@@ -14,10 +14,11 @@
 #define GATE_MANUAL BIT(20)
 #define GATE_ENABLE_HWACG BIT(28)
 
-void __init exynos_arm64_register_cmu(struct device *dev,
+int __init exynos_arm64_register_cmu(struct device *dev,
 		struct device_node *np, const struct samsung_cmu_info *cmu)
 {
 	struct clk *bus;
+	struct samsung_clk_provider *ctx;
 	void __iomem *base;
 	unsigned int i;
 	int ret;
@@ -28,7 +29,7 @@ void __init exynos_arm64_register_cmu(struct device *dev,
 		if (IS_ERR(bus)) {
 			pr_err("%pOF: CMU bus clock unavailable: %ld\n",
 			       np, PTR_ERR(bus));
-			return;
+			return PTR_ERR(bus);
 		}
 		ret = clk_prepare_enable(bus);
 		if (ret) {
@@ -60,5 +61,6 @@ void __init exynos_arm64_register_cmu(struct device *dev,
 		writel(val, base + off);
 	}
 	iounmap(base);
-	samsung_cmu_register_one(np, cmu);
+	ctx = samsung_cmu_register_one(np, cmu);
+	return ctx ? 0 : -ENOMEM;
 }
