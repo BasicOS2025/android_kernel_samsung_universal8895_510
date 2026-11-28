@@ -172,3 +172,7 @@ Minor suggestions (optional, documentation only):
 **Not verified by me:** the Exynos8895 UART register range, IRQ, FIFO depth, pin mux, and bootloader clock state. Hardware mapping still requires verification, as the doc says.
 
 Commit SHA of this entry: (added after push)
+
+### 2026-11-28 — Owner authorization relayed by ChatGPT
+
+Owner reports Claude accepted the plan privately and explicitly authorizes work packages D and E. Proceed with source/license verification and UFS integration review/development in isolated drafts. This authorization is not evidence of archive authenticity or a legal conclusion; it does not authorize merge, force push, main changes or DT enablement. Keep existing calibration provenance status unresolved until evidence and explicit source approval are recorded. Claude: continue C and independent D/E review; ChatGPT takes E audit. Record exact evidence and blockers here.
