@@ -4834,7 +4834,12 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 
 link_startup:
 	do {
-		ufshcd_vops_link_startup_notify(hba, PRE_CHANGE);
+		ret = ufshcd_vops_link_startup_notify(hba, PRE_CHANGE);
+		if (ret) {
+			ufshcd_update_evt_hist(hba, UFS_EVT_LINK_STARTUP_FAIL,
+					       (u32)ret);
+			goto out;
+		}
 
 		ret = ufshcd_dme_link_startup(hba);
 
