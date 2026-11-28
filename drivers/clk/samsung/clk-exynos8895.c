@@ -2765,9 +2765,10 @@ static int __init exynos8895_cmu_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 
 	info = of_device_get_match_data(dev);
-	exynos_arm64_register_cmu(dev, dev->of_node, info);
+	if (!info)
+		return -ENODEV;
 
-	return 0;
+	return exynos_arm64_register_cmu(dev, dev->of_node, info);
 }
 
 static const struct of_device_id exynos8895_cmu_of_match[] = {
