@@ -9,6 +9,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -1502,6 +1503,15 @@ static int exynos_ufs_probe(struct platform_device *pdev)
 
 	if (drv_data && drv_data->vops)
 		vops = drv_data->vops;
+
+	/* The working Exynos8895 vendor driver uses 32-bit DMA.
+	 * Keep this constraint when the dedicated variant is enabled.
+	 */
+	if (of_device_is_compatible(dev->of_node, "samsung,exynos8895-ufs")) {
+		err = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		if (err)
+			return err;
+	}
 
 	err = ufshcd_pltfrm_init(pdev, vops);
 	if (err)
