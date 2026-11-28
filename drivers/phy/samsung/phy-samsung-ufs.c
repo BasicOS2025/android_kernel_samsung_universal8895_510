@@ -45,21 +45,6 @@ static void samsung_ufs_phy_config(struct samsung_ufs_phy *phy,
 	}
 }
 
-/* Exynos8895 vendor ufs-cal-8895.c: byte offsets, per-lane CDR. */
-static int exynos8895_ufs_phy_wait_for_cdr(struct samsung_ufs_phy *phy)
-{
-	u32 val;
-	int lane, ret;
-
-	for_each_phy_lane(phy, lane) {
-		ret = readl_poll_timeout(phy->reg_pma + 0x1fc + lane * 0x140,
-					 val, (val & 0x40) == 0x40, 10, 100000);
-		if (ret)
-			return ret;
-	}
-	return 0;
-}
-
 static int samsung_ufs_phy_wait_for_lock_acq(struct phy *phy)
 {
 	struct samsung_ufs_phy *ufs_phy = get_samsung_ufs_phy(phy);
@@ -67,10 +52,6 @@ static int samsung_ufs_phy_wait_for_lock_acq(struct phy *phy)
 	const unsigned int sleep_us = 10;
 	u32 val;
 	int err;
-
-	if (of_device_is_compatible(ufs_phy->dev->of_node,
-				    "samsung,exynos8895-ufs-phy"))
-		return exynos8895_ufs_phy_wait_for_cdr(ufs_phy);
 
 	err = readl_poll_timeout(
 			ufs_phy->reg_pma + PHY_APB_ADDR(PHY_PLL_LOCK_STATUS),
