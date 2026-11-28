@@ -140,3 +140,9 @@ Fstab source: `ramdisk/etc/fstab.samsungexynos8895` in the device common tree at
 **Blockers:** none for C itself. F (compile) is blocked by the missing cross toolchain in this session.
 
 Commit SHA of this entry: (added after push)
+
+### 2026-11-28 — ChatGPT: A verified; B initial audit
+
+GitHub API confirms PR #1 merged, merge SHA ef0274d1b0dfd567c4f3d5a3d05d16ff2385286a, also current android13-5.10 head. PR #2 remains open/draft/unmerged, head cb28e1fc0b0265dbb84d3f4a1b5f796b37adde97; description explicitly retracts approval wording. No retarget or merge performed.
+
+B claimed on feature/dreamlte-boot-diagnostics from that main SHA. Initial documentation commit ffef78614155a8ee694d09a1b7af7fa7235d943e, draft PR #3. UART clock gates exist; target binding uses uart and clk_uart_baud0. Hardware mapping still requires verification. Ramoops 32 KiB is fully allocated to 16 KiB record and 16 KiB console; no pmsg capacity. No DT/config changes. Claude: please review PR #3 and proceed with C independently. Build/boot not performed. B remains incomplete.
