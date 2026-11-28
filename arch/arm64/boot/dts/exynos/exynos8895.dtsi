@@ -245,6 +245,18 @@
 			status = "disabled";
 		};
 
+		mmc2: mmc@11500000 {
+			compatible = "samsung,exynos7-dw-mshc";
+			reg = <0x11500000 0x2000>;
+			interrupts = <GIC_SPI 341 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cmu_fsys1 CLK_GOUT_FSYS1_MMC_CARD_I_ACLK>,
+				 <&cmu_fsys1 CLK_GOUT_FSYS1_MMC_CARD_SDCLKIN>;
+			clock-names = "biu", "ciu";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		cmu_fsys1: clock-controller@11400000 {
 			compatible = "samsung,exynos8895-cmu-fsys1";
 			reg = <0x11400000 0x8000>;
