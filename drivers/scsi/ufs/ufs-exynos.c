@@ -964,8 +964,9 @@ static int exynos8895_link_cal(struct exynos_ufs *ufs, bool pre)
 		if (ufshcd_dme_set(hba, UIC_ARG_MIB(0x9529), 0) && !ret) ret = -EIO;
 		if (ret) return ret;
 	}
-	SET_MIB(0x200, 0, 0x40);
+	/* A failed DME command may still have reached the device. */
 	pcs_override = true;
+	SET_MIB(0x200, 0, 0x40);
 	for (lane = 0; lane < ufs->avail_ln_rx; lane++) {
 		if (pre) {
 			SET_MIB(0x12, 4 + lane, NSEC_PER_SEC / ufs->pclk_rate);
