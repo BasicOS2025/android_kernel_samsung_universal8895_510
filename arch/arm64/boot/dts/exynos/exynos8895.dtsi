@@ -229,7 +229,19 @@
 			clocks = <&cmu_fsys0 CLK_GOUT_FSYS0_UFS_EMBD_I_ACLK>,
 				 <&cmu_fsys0 CLK_GOUT_FSYS0_UFS_EMBD_I_CLK_UNIPRO>;
 			clock-names = "core_clk", "sclk_unipro_main";
+			phys = <&ufs_phy>;
+			phy-names = "ufs-phy";
 			dma-coherent;
+			status = "disabled";
+		};
+
+		/* PMA aperture from the vendor Exynos8895 UFS v4 description. */
+		ufs_phy: phy@11124000 {
+			compatible = "samsung,exynos8895-ufs-phy";
+			reg = <0x11124000 0x800>;
+			reg-names = "phy-pma";
+			#phy-cells = <0>;
+			samsung,pmu-syscon = <&pmu_system_controller>;
 			status = "disabled";
 		};
 
