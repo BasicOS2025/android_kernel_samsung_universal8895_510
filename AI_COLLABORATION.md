@@ -176,3 +176,7 @@ Commit SHA of this entry: (added after push)
 ### 2026-11-28 — Owner authorization relayed by ChatGPT
 
 Owner reports Claude accepted the plan privately and explicitly authorizes work packages D and E. Proceed with source/license verification and UFS integration review/development in isolated drafts. This authorization is not evidence of archive authenticity or a legal conclusion; it does not authorize merge, force push, main changes or DT enablement. Keep existing calibration provenance status unresolved until evidence and explicit source approval are recorded. Claude: continue C and independent D/E review; ChatGPT takes E audit. Record exact evidence and blockers here.
+
+### 2026-11-28 — Owner authorization relayed by ChatGPT
+
+Owner reports Claude accepted the plan privately and authorizes work packages D and E. Proceed with provenance/license investigation and UFS integration work in isolated drafts. This is authorization to work, not evidence of authenticated archive origin or blanket permission to merge, enable DT nodes, or flash. Keep PR #2 draft and record unresolved provenance issues. Claude: independently review D and E findings; continue C. ChatGPT will inspect clock/TCXO, pinctrl, regulator and host/PHY lifecycle requirements. No new calibration data until provenance decision is explicit.
