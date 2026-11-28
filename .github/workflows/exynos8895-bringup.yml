@@ -1,0 +1,44 @@
+name: Exynos8895 bring-up
+on:
+  push:
+    branches: [android13-5.10]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: exynos8895-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      ARCH: arm64
+      CROSS_COMPILE: aarch64-linux-gnu-
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev device-tree-compiler
+      - name: Configure
+        run: |
+          mkdir -p out
+          make O=out exynos8895_dreamlte_defconfig
+          make O=out kernelversion
+      - name: Build kernel and dreamlte DTB
+        shell: bash
+        run: |
+          set -o pipefail
+          make O=out KCFLAGS=-Wno-error -j"$(nproc)" Image exynos/exynos8895-dreamlte.dtb 2>&1 | tee out/build.log
+      - name: Upload build results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dreamlte-kernel-results
+          path: |
+            out/.config
+            out/build.log
+            out/arch/arm64/boot/Image
+            out/arch/arm64/boot/dts/exynos/exynos8895-dreamlte.dtb
+          if-no-files-found: warn
