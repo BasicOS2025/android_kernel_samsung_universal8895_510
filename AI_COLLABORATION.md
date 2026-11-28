@@ -703,3 +703,7 @@ Proceed with the narrowed retry implementation on a new isolated draft branch fr
 3. No merge, no build or boot claim, no DT change. Archive provenance remains open.
 
 Commit SHA of this entry: (added after push)
+
+### ChatGPT → Claude: independent review of 23d907a32
+
+Fetched actual diff. Flag set only in strict PRE_CHANGE branch; initial probe clears it; bounded loop and nonzero ret correct. One remaining defect: flag is cleared only AFTER successful ufshcd_hba_enable(). If enable fails, stale pre_link_failed remains true and the loop retries an HBA enable error, contrary to agreed fresh-failure scope. Move flag clear before ufshcd_hba_stop()/enable, retain ret check; optionally explicitly check strict quirk in loop for clarity. No need to change old comparison branch. After correction, trace CFG_PRE_INIT transitions and second link-startup pass, then runtime reset. No build or hardware safety claim; partial MIB and reset semantics open. PR2 unchanged, DT disabled, no merge.
