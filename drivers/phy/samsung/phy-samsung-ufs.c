@@ -99,6 +99,9 @@ static int samsung_ufs_phy_calibrate(struct phy *phy)
 	if (ufs_phy->ufs_phy_state == CFG_POST_PWR_HS)
 		err = samsung_ufs_phy_wait_for_lock_acq(phy);
 
+	if (err)
+		return err;
+
 	/**
 	 * In Samsung ufshci, PHY need to be calibrated at different
 	 * stages / state mainly before Linkstartup, after Linkstartup,
@@ -203,6 +206,9 @@ static int samsung_ufs_phy_init(struct phy *phy)
 {
 	struct samsung_ufs_phy *ss_phy = get_samsung_ufs_phy(phy);
 	int ret;
+
+	if (phy->attrs.bus_width < 1 || phy->attrs.bus_width > 2)
+		return -EINVAL;
 
 	ss_phy->lane_cnt = phy->attrs.bus_width;
 	ss_phy->ufs_phy_state = CFG_PRE_INIT;
