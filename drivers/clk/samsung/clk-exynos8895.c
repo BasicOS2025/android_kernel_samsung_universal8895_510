@@ -2759,46 +2759,43 @@ static const struct samsung_cmu_info peric1_cmu_info __initconst = {
 	.clk_name		= "bus",
 };
 
-static int __init exynos8895_cmu_probe(struct platform_device *pdev)
+static void __init exynos8895_cmu_fsys0_init(struct device_node *np)
 {
-	const struct samsung_cmu_info *info;
-	struct device *dev = &pdev->dev;
+	int ret = exynos_arm64_register_cmu(NULL, np, &fsys0_cmu_info);
 
-	info = of_device_get_match_data(dev);
-	if (!info)
-		return -ENODEV;
-
-	return exynos_arm64_register_cmu(dev, dev->of_node, info);
+	if (ret)
+		pr_err("%pOF: CMU registration failed: %d\n", np, ret);
 }
+CLK_OF_DECLARE(exynos8895_cmu_fsys0, "samsung,exynos8895-cmu-fsys0",
+	       exynos8895_cmu_fsys0_init);
 
-static const struct of_device_id exynos8895_cmu_of_match[] = {
-	{
-		.compatible = "samsung,exynos8895-cmu-fsys0",
-		.data = &fsys0_cmu_info,
-	}, {
-		.compatible = "samsung,exynos8895-cmu-fsys1",
-		.data = &fsys1_cmu_info,
-	}, {
-		.compatible = "samsung,exynos8895-cmu-peric0",
-		.data = &peric0_cmu_info,
-	}, {
-		.compatible = "samsung,exynos8895-cmu-peric1",
-		.data = &peric1_cmu_info,
-	},
-	{ }
-};
-
-static struct platform_driver exynos8895_cmu_driver __refdata = {
-	.driver = {
-		.name = "exynos8895-cmu",
-		.of_match_table = exynos8895_cmu_of_match,
-		.suppress_bind_attrs = true,
-	},
-	.probe = exynos8895_cmu_probe,
-};
-
-static int __init exynos8895_cmu_init(void)
+static void __init exynos8895_cmu_fsys1_init(struct device_node *np)
 {
-	return platform_driver_register(&exynos8895_cmu_driver);
+	int ret = exynos_arm64_register_cmu(NULL, np, &fsys1_cmu_info);
+
+	if (ret)
+		pr_err("%pOF: CMU registration failed: %d\n", np, ret);
 }
-core_initcall(exynos8895_cmu_init);
+CLK_OF_DECLARE(exynos8895_cmu_fsys1, "samsung,exynos8895-cmu-fsys1",
+	       exynos8895_cmu_fsys1_init);
+
+static void __init exynos8895_cmu_peric0_init(struct device_node *np)
+{
+	int ret = exynos_arm64_register_cmu(NULL, np, &peric0_cmu_info);
+
+	if (ret)
+		pr_err("%pOF: CMU registration failed: %d\n", np, ret);
+}
+CLK_OF_DECLARE(exynos8895_cmu_peric0, "samsung,exynos8895-cmu-peric0",
+	       exynos8895_cmu_peric0_init);
+
+static void __init exynos8895_cmu_peric1_init(struct device_node *np)
+{
+	int ret = exynos_arm64_register_cmu(NULL, np, &peric1_cmu_info);
+
+	if (ret)
+		pr_err("%pOF: CMU registration failed: %d\n", np, ret);
+}
+CLK_OF_DECLARE(exynos8895_cmu_peric1, "samsung,exynos8895-cmu-peric1",
+	       exynos8895_cmu_peric1_init);
+
