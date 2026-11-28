@@ -8416,12 +8416,15 @@ static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 	     retry < BOOT_PROBE_STRICT_RETRIES; retry++) {
 		dev_warn(hba->dev, "%s: pre-link calibration failed (%d), host reset retry %d/%d\n",
 			 __func__, ret, retry + 1, BOOT_PROBE_STRICT_RETRIES);
+		/*
+		 * Clear before the reset: a failed enable is not a PRE_CHANGE
+		 * failure and must end the retries, not be retried as one.
+		 */
+		hba->pre_link_failed = false;
 		ufshcd_hba_stop(hba);
 		ret = ufshcd_hba_enable(hba);
-		if (!ret) {
-			hba->pre_link_failed = false;
+		if (!ret)
 			ret = ufshcd_probe_hba(hba, true);
-		}
 	}
 	up(&hba->host_sem);
 	if (ret)
