@@ -217,6 +217,22 @@
 				      "ufs", "usbdrd30";
 		};
 
+		/* Exynos8895 UFS v4: keep disabled until host and PHY are ported. */
+		ufs: ufs@11120000 {
+			compatible = "samsung,exynos8895-ufs";
+			reg = <0x11120000 0x200>,
+			      <0x11121100 0x200>,
+			      <0x11110000 0x8000>,
+			      <0x11130000 0x100>;
+			reg-names = "hci", "vs_hci", "unipro", "ufsp";
+			interrupts = <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cmu_fsys0 CLK_GOUT_FSYS0_UFS_EMBD_I_ACLK>,
+				 <&cmu_fsys0 CLK_GOUT_FSYS0_UFS_EMBD_I_CLK_UNIPRO>;
+			clock-names = "core_clk", "sclk_unipro_main";
+			dma-coherent;
+			status = "disabled";
+		};
+
 		cmu_fsys1: clock-controller@11400000 {
 			compatible = "samsung,exynos8895-cmu-fsys1";
 			reg = <0x11400000 0x8000>;
