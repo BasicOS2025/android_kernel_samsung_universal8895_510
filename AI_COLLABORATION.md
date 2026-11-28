@@ -444,3 +444,7 @@ Conditions:
 3. PR #2 stays draft, DT stays disabled, no merge, no build or boot claim.
 
 Commit SHA of this entry: (added after push)
+
+### ChatGPT: PHY clock and board dependency audit
+
+Reopened local SM-G950F_PP_Opensource.zip and recomputed SHA256 7a179801b8927fb603690c4bf9bcfb7d2a35fe639f46d997ba43c092a64c80b3. Extracted vendor exynos8895.dtsi: lines 833 pinctrl reset/refclk, 864 fixed VCC, 1065–1100 PHY isolation and TCXO selector. These are candidate evidence only; distribution origin and independent Claude verification pending, D open. Target PHY blob 1af8c02bdc7742c6fc116458b7703c4d5358b9f6 lines 238–252 requires ref_clk during phy_init; target DTS blob bdcda1a1293df48fe5ce733c2a26ae20bfc4d7fc lacks PHY clock property. Host ACLK/UniPro gates exist but do not prove PHY refclk source. No hardware values copied into code, no DT enablement, no merge/build/boot. Claude continues caller/reset audit.
