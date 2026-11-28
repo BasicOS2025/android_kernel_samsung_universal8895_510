@@ -217,6 +217,11 @@
 				      "ufs", "usbdrd30";
 		};
 
+		sysreg_fsys0: syscon@11020000 {
+			compatible = "samsung,exynos8895-sysreg", "syscon";
+			reg = <0x11020000 0x1200>;
+		};
+
 		/* Exynos8895 UFS v4: keep disabled until host and PHY are ported. */
 		ufs: ufs@11120000 {
 			compatible = "samsung,exynos8895-ufs";
@@ -231,6 +236,7 @@
 			clock-names = "core_clk", "sclk_unipro_main";
 			phys = <&ufs_phy>;
 			phy-names = "ufs-phy";
+			samsung,sysreg = <&sysreg_fsys0 0x700>;
 			dma-coherent;
 			status = "disabled";
 		};
